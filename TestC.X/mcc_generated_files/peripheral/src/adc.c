@@ -1,17 +1,3 @@
-/**
- * CLOCK Generated Driver Source File
- * 
- * @file clock.c
- * 
- * @ingroup clockdriver 
- * 
- * @brief This file contains the API implementation for the Clock driver.
- *
- * @version Driver Version 1.0.1
- *
- * @version Package Version 1.0.2 
-*/
-
 /*
 © [2025] Microchip Technology Inc. and its subsidiaries.
 
@@ -34,17 +20,19 @@
 */
 
 #include <xc.h>
-#include "../clock.h"
+#include "../adc.h"
 
-void CLOCK_Initialize(void)
+// Set the ADC module to the options selected in the user interface.
+void ADC_Initialize(void) 
 {
-    OSCCON = (14 << _OSCCON_IRCF_POSN)   // IRCF 8MHz_HF
-        | (2 << _OSCCON_SCS_POSN)   // SCS INTOSC
-        | (1 << _OSCCON_SPLLEN_POSN);  // SPLLEN enabled
-    BORCON = (0 << _BORCON_SBOREN_POSN)   // SBOREN disabled
-        | (1 << _BORCON_BORFS_POSN);  // BORFS enabled
-    OSCTUNE = (0 << _OSCTUNE_TUN_POSN);  // TUN 0x0
+    // ADRMD 10_bit_mode; CHS AN0; GO_nDONE stop; ADON enabled; 
+    ADCON0 = 0x81;
+    // ADFM sign_magnitude; ADCS FOSC/2; ADNREF VSS; ADPREF VDD; 
+    ADCON1 = 0x0;
+    // TRIGSEL disabled; CHSN AN0; 
+    ADCON2 = 0x0;
+    // ADRESH 0x0; 
+    ADRESH = 0x0;
+    // ADRESL 0x0; 
+    ADRESL = 0x0;
 }
-/**
- End of File
-*/

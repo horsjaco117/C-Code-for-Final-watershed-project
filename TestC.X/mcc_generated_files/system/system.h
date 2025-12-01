@@ -41,6 +41,7 @@
 #include <stdbool.h>
 #include "config_bits.h"
 #include "../system/pins.h"
+#include "../peripheral/adc.h"
 #include "../uart/eusart.h"
 #include "../system/interrupt.h"
 #include "../system/clock.h"

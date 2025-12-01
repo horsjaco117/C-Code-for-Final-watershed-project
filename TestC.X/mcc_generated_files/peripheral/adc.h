@@ -1,17 +1,3 @@
-/**
- * CLOCK Generated Driver Source File
- * 
- * @file clock.c
- * 
- * @ingroup clockdriver 
- * 
- * @brief This file contains the API implementation for the Clock driver.
- *
- * @version Driver Version 1.0.1
- *
- * @version Package Version 1.0.2 
-*/
-
 /*
 © [2025] Microchip Technology Inc. and its subsidiaries.
 
@@ -33,18 +19,5 @@
     THIS SOFTWARE.
 */
 
-#include <xc.h>
-#include "../clock.h"
+void ADC_Initialize(void);
 
-void CLOCK_Initialize(void)
-{
-    OSCCON = (14 << _OSCCON_IRCF_POSN)   // IRCF 8MHz_HF
-        | (2 << _OSCCON_SCS_POSN)   // SCS INTOSC
-        | (1 << _OSCCON_SPLLEN_POSN);  // SPLLEN enabled
-    BORCON = (0 << _BORCON_SBOREN_POSN)   // SBOREN disabled
-        | (1 << _BORCON_BORFS_POSN);  // BORFS enabled
-    OSCTUNE = (0 << _OSCTUNE_TUN_POSN);  // TUN 0x0
-}
-/**
- End of File
-*/

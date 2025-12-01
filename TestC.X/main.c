@@ -55,7 +55,7 @@ SYSTEM_Initialize();
 EUSART_WriteString(message);  // Changed: Renamed call from UART_WriteString (removed redundant (void) cast).
 while(1)
 {
-__delay_ms(10);  // Added: Simple 1-second delay for repeated testing (e.g., resend message); remove if not needed.
+__delay_ms(100);  // Added: Simple 1-second delay for repeated testing (e.g., resend message); remove if not needed.
 EUSART_WriteString(message);  // Added: Repeat send in loop for visibility on terminal (explicit for debugging serial).
 }
 }
