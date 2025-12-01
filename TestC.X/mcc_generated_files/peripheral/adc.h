@@ -18,6 +18,10 @@
     EXCEED AMOUNT OF FEES, IF ANY, YOU PAID DIRECTLY TO MICROCHIP FOR 
     THIS SOFTWARE.
 */
-
+#include <stdbool.h>
 void ADC_Initialize(void);
+
+void ADC_StartConversion(uint8_t channel);
+bool ADC_IsConversionDone(void);
+uint16_t ADC_GetConversionResult(void);
 
