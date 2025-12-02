@@ -131,7 +131,10 @@ typedef enum
     posChannel_DAC1 =  0x1e,
     posChannel_FVR =  0x1f,
     posChannel_AN0 =  0x0,
-    posChannel_AN1 =  0x1
+    posChannel_AN1 =  0x1,
+    posChannel_AN2 =  0x2,
+    posChannel_AN3 =  0x3,
+    posChannel_AN4 =  0x4
 } adc_posChannel_t;
 
 /**
@@ -143,7 +146,10 @@ typedef enum
 {
     negChannel_ADNREF =  0xf,
     negChannel_AN0 =  0x0,
-    negChannel_AN1 =  0x1
+    negChannel_AN1 =  0x1,
+    negChannel_AN2 =  0x2,
+    negChannel_AN3 =  0x3,
+    negChannel_AN4 =  0x4
 } adc_negChannel_t;
 
 /**

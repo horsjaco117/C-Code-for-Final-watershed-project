@@ -40,8 +40,8 @@
 
 void ADC_Initialize(void)
 {
-    //ADPREF VDD; ADCS FOSC/16; ADFM sign_magnitude; ADNREF VSS; 
-    ADCON1 = 0x50;
+    //ADPREF VDD; ADCS FOSC/32; ADFM sign_magnitude; ADNREF VSS; 
+    ADCON1 = 0x20;
 
     //CHSN AN1; TRIGSEL disabled; 
     ADCON2 = 0x1;
