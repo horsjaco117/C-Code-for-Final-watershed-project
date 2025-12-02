@@ -1,6 +1,6 @@
 // main.c - PIC16F1788 - MPLAB X v6.20
-// SCRAM MODE: 24 40 ? 25 00 ? 24 40 ? 25 00 ... (repeating fast)
-// Normal mode: full cycle with real DigitalOutputs
+// DigitalOutputs (0x7C) = Direct mirror to PORTB (RB0?RB7)
+// SCRAM forces PORTB = 0x00 and sends 25 00
 #include <xc.h>
 #include "mcc_generated_files/system/system.h"
 #include "mcc_generated_files/adc/adc.h"
@@ -13,7 +13,7 @@ volatile __at(0x74) uint16_t AN2_value;
 volatile __at(0x76) uint16_t AN3_value;
 volatile __at(0x78) uint16_t AN5_value;
 volatile __at(0x7A) uint8_t DigitalInputs;
-volatile __at(0x7C) uint8_t DigitalOutputs;   // Real outputs (used in normal mode)
+volatile __at(0x7C) uint8_t DigitalOutputs;   // This now CONTROLS PORTB
 
 #define CH_AN0 2
 #define CH_AN1 3
@@ -59,13 +59,19 @@ void main(void)
 {
     SYSTEM_Initialize();
 
+    // === PORTB SETUP: All pins as digital outputs ===
+    ANSELB = 0x00;        // All PORTB pins digital (not analog)
+    TRISB = 0x00;         // All PORTB pins as outputs
+    PORTB = 0x00;         // Start with all off
+
+    // IOC Setup
     IOCANbits.IOCAN6 = 1;
     IOCANbits.IOCAN7 = 1;
     IOCAF = 0;
     IOCIE = 1; PEIE = 1; GIE = 1;
 
     DigitalInputs  = 0x00;
-    DigitalOutputs = 0xFF;        // Your real output state (used in normal mode)
+    DigitalOutputs = 0xFF;        // Start with all outputs off
 
     // Flush UART
     while (!TXSTAbits.TRMT);
@@ -79,27 +85,31 @@ void main(void)
         uint8_t scram_active = (DigitalInputs & (1 << 6));
 
         // ============================================================
-        // SCRAM MODE: Blast 24 + Inputs ? 25 + 00 ? repeat
+        // SCRAM MODE: Force PORTB = 0 and blast status
         // ============================================================
         if (scram_active)
         {
-            if (TXSTAbits.TRMT)                     // Safe to send
+            PORTB = 0x00;                        // FORCE ALL OUTPUTS OFF
+
+            if (TXSTAbits.TRMT)
             {
                 EUSART_Write(0x24);
                 while (!TXSTAbits.TRMT);
-                EUSART_Write(DigitalInputs);        // 0x40 (or 0xC0 if resume pressed too)
+                EUSART_Write(DigitalInputs);     // 0x40
 
                 EUSART_Write(0x25);
                 while (!TXSTAbits.TRMT);
-                EUSART_Write(0x00);                 // ? Forced all outputs OFF
+                EUSART_Write(0x00);              // Shows outputs are forced off
             }
             __delay_us(10);
             continue;
         }
 
         // ============================================================
-        // NORMAL MODE: Full 7-packet cycle
+        // NORMAL MODE: DigitalOutputs controls PORTB directly
         // ============================================================
+        PORTB = DigitalOutputs;                  // LIVE mirror to hardware!
+
         if (first_cycle || ch == 0)
         {
             while (!TXSTAbits.TRMT);
@@ -115,13 +125,12 @@ void main(void)
             continue;
         }
 
-        // DigitalOutputs packet (real value)
         if (ch == 1)
         {
             while (!TXSTAbits.TRMT);
             EUSART_Write(0x25);
             while (!TXSTAbits.TRMT);
-            EUSART_Write(DigitalOutputs);   // ? Real outputs in normal mode
+            EUSART_Write(DigitalOutputs);        // Sent value = actual PORTB state
 
             FSR0L = base_addr[1];
             INDF0 = DigitalOutputs;
@@ -132,7 +141,6 @@ void main(void)
             continue;
         }
 
-        // Analog channels
         if (ADC_IsConversionDone())
         {
             uint16_t result = ADC_GetConversionResult();
