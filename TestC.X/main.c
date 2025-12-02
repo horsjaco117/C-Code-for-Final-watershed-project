@@ -1,6 +1,6 @@
 // main.c - PIC16F1788 - MPLAB X v6.20
-// SCRAM MODE: Continuously blasts 0x24 + DigitalInputs (bit6 = 1)
-// Normal mode: Full 5-channel cycle
+// SCRAM MODE: 24 40 ? 25 00 ? 24 40 ? 25 00 ... (repeating fast)
+// Normal mode: full cycle with real DigitalOutputs
 #include <xc.h>
 #include "mcc_generated_files/system/system.h"
 #include "mcc_generated_files/adc/adc.h"
@@ -12,16 +12,17 @@ volatile __at(0x72) uint16_t AN1_value;
 volatile __at(0x74) uint16_t AN2_value;
 volatile __at(0x76) uint16_t AN3_value;
 volatile __at(0x78) uint16_t AN5_value;
-volatile __at(0x7A) uint8_t DigitalInputs;   // Status register
+volatile __at(0x7A) uint8_t DigitalInputs;
+volatile __at(0x7C) uint8_t DigitalOutputs;   // Real outputs (used in normal mode)
 
-#define CH_AN0 0
-#define CH_AN1 1
-#define CH_AN2 2
-#define CH_AN3 3
-#define CH_AN5 4
+#define CH_AN0 2
+#define CH_AN1 3
+#define CH_AN2 4
+#define CH_AN3 5
+#define CH_AN5 6
 
-const uint8_t ids[6]       = {0x24, 0xA0, 0xA1, 0xA2, 0xA3, 0xA5};
-const uint8_t base_addr[6] = {0x7A, 0x70, 0x72, 0x74, 0x76, 0x78};
+const uint8_t ids[7]       = {0x24, 0x25, 0xA0, 0xA1, 0xA2, 0xA3, 0xA5};
+const uint8_t base_addr[7] = {0x7A, 0x7C, 0x70, 0x72, 0x74, 0x76, 0x78};
 
 volatile uint8_t ch = 0;
 volatile uint8_t first_cycle = 1;
@@ -30,30 +31,26 @@ void __interrupt() ISR(void)
 {
     if (IOCIF)
     {
-        // RA6 = SCRAM pressed
         if (IOCAFbits.IOCAF6)
         {
             IOCAFbits.IOCAF6 = 0;
             __delay_ms(20);
-            if (!PORTAbits.RA6)                  // confirmed pressed
+            if (!PORTAbits.RA6)
             {
-                DigitalInputs |=  (1 << 6);       // Set SCRAM active
-                DigitalInputs &= ~(1 << 7);       // Clear any old RESUME flag
+                DigitalInputs |=  (1 << 6);
+                DigitalInputs &= ~(1 << 7);
             }
         }
-
-        // RA7 = RESUME pressed
         if (IOCAFbits.IOCAF7)
         {
             IOCAFbits.IOCAF7 = 0;
             __delay_ms(20);
-            if (!PORTAbits.RA7)                  // confirmed pressed
+            if (!PORTAbits.RA7)
             {
-                DigitalInputs &= ~(1 << 6);       // Clear SCRAM
-                DigitalInputs &= ~(1 << 7);       // Clear RESUME flag (one-shot)
+                DigitalInputs &= ~(1 << 6);
+                DigitalInputs &= ~(1 << 7);
             }
         }
-
         IOCIF = 0;
     }
 }
@@ -62,20 +59,18 @@ void main(void)
 {
     SYSTEM_Initialize();
 
-    // Both buttons trigger on falling edge (active low)
     IOCANbits.IOCAN6 = 1;
     IOCANbits.IOCAN7 = 1;
     IOCAF = 0;
-    IOCIE = 1;
-    PEIE = 1;
-    GIE = 1;
+    IOCIE = 1; PEIE = 1; GIE = 1;
 
-    DigitalInputs = 0x00;
+    DigitalInputs  = 0x00;
+    DigitalOutputs = 0xFF;        // Your real output state (used in normal mode)
 
-    // Flush UART at startup
+    // Flush UART
     while (!TXSTAbits.TRMT);
-    TXREG = 0xFF;  while (!TXSTAbits.TRMT);
-    TXREG = 0xFF;  while (!TXSTAbits.TRMT);
+    TXREG = 0xFF; while (!TXSTAbits.TRMT);
+    TXREG = 0xFF; while (!TXSTAbits.TRMT);
 
     __delay_ms(100);
 
@@ -84,41 +79,60 @@ void main(void)
         uint8_t scram_active = (DigitalInputs & (1 << 6));
 
         // ============================================================
-        // SCRAM MODE: Continuously blast 0x24 + status byte
+        // SCRAM MODE: Blast 24 + Inputs ? 25 + 00 ? repeat
         // ============================================================
         if (scram_active)
         {
-            if (TXSTAbits.TRMT)                     // Shift register empty?
+            if (TXSTAbits.TRMT)                     // Safe to send
             {
                 EUSART_Write(0x24);
-                while (!TXSTAbits.TRMT);            // Wait for byte to finish
-                EUSART_Write(DigitalInputs);        // Always has bit6 = 1
+                while (!TXSTAbits.TRMT);
+                EUSART_Write(DigitalInputs);        // 0x40 (or 0xC0 if resume pressed too)
+
+                EUSART_Write(0x25);
+                while (!TXSTAbits.TRMT);
+                EUSART_Write(0x00);                 // ? Forced all outputs OFF
             }
             __delay_us(10);
             continue;
         }
 
         // ============================================================
-        // NORMAL MODE: Full data cycle
+        // NORMAL MODE: Full 7-packet cycle
         // ============================================================
         if (first_cycle || ch == 0)
         {
             while (!TXSTAbits.TRMT);
             EUSART_Write(0x24);
             while (!TXSTAbits.TRMT);
-            EUSART_Write(DigitalInputs);            // Normal status (bit6 = 0)
+            EUSART_Write(DigitalInputs);
 
             FSR0L = base_addr[0];
             INDF0 = DigitalInputs;
 
             first_cycle = 0;
             ch = 1;
+            continue;
+        }
 
+        // DigitalOutputs packet (real value)
+        if (ch == 1)
+        {
+            while (!TXSTAbits.TRMT);
+            EUSART_Write(0x25);
+            while (!TXSTAbits.TRMT);
+            EUSART_Write(DigitalOutputs);   // ? Real outputs in normal mode
+
+            FSR0L = base_addr[1];
+            INDF0 = DigitalOutputs;
+
+            ch = 2;
             ADC_SetPositiveChannel(CH_AN0);
             ADC_StartConversion();
             continue;
         }
 
+        // Analog channels
         if (ADC_IsConversionDone())
         {
             uint16_t result = ADC_GetConversionResult();
@@ -134,16 +148,16 @@ void main(void)
             EUSART_Write(high_byte);
 
             ch++;
-            if (ch >= 6) ch = 0;
-            else
+            if (ch >= 7) ch = 0;
+            else if (ch >= 2)
             {
                 switch (ch)
                 {
-                    case 1: ADC_SetPositiveChannel(CH_AN0); break;
-                    case 2: ADC_SetPositiveChannel(CH_AN1); break;
-                    case 3: ADC_SetPositiveChannel(CH_AN2); break;
-                    case 4: ADC_SetPositiveChannel(CH_AN3); break;
-                    case 5: ADC_SetPositiveChannel(CH_AN5); break;
+                    case 2: ADC_SetPositiveChannel(CH_AN0); break;
+                    case 3: ADC_SetPositiveChannel(CH_AN1); break;
+                    case 4: ADC_SetPositiveChannel(CH_AN2); break;
+                    case 5: ADC_SetPositiveChannel(CH_AN3); break;
+                    case 6: ADC_SetPositiveChannel(CH_AN5); break;
                 }
                 ADC_StartConversion();
             }
