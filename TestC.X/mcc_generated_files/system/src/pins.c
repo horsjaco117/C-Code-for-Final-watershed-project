@@ -35,6 +35,7 @@
 #include "../pins.h"
 
 void (*IO_RA6_InterruptHandler)(void);
+void (*IO_RA7_InterruptHandler)(void);
 
 void PIN_MANAGER_Initialize(void)
 {
@@ -49,7 +50,7 @@ void PIN_MANAGER_Initialize(void)
     TRISx registers
     */
     TRISA = 0xFF;
-    TRISB = 0xFF;
+    TRISB = 0x1;
     TRISC = 0xBF;
     TRISE = 0x8;
 
@@ -57,7 +58,7 @@ void PIN_MANAGER_Initialize(void)
     ANSELx registers
     */
     ANSELA = 0x2F;
-    ANSELB = 0x7F;
+    ANSELB = 0x1;
     ANSELC = 0x3F;
 
     /**
@@ -102,7 +103,7 @@ void PIN_MANAGER_Initialize(void)
    /**
     IOCx registers 
     */
-    IOCAP = 0x0;
+    IOCAP = 0x80;
     IOCAN = 0x40;
     IOCAF = 0x0;
     IOCBP = 0x0;
@@ -116,6 +117,7 @@ void PIN_MANAGER_Initialize(void)
     IOCEF = 0x0;
 
     IO_RA6_SetInterruptHandler(IO_RA6_DefaultInterruptHandler);
+    IO_RA7_SetInterruptHandler(IO_RA7_DefaultInterruptHandler);
 
     // Enable INTCONbits.IOCIE interrupt 
     INTCONbits.IOCIE = 1; 
@@ -127,6 +129,11 @@ void PIN_MANAGER_IOC(void)
     if(IOCAFbits.IOCAF6 == 1)
     {
         IO_RA6_ISR();  
+    }
+    // interrupt on change for pin IO_RA7}
+    if(IOCAFbits.IOCAF7 == 1)
+    {
+        IO_RA7_ISR();  
     }
 }
    
@@ -158,6 +165,36 @@ void IO_RA6_SetInterruptHandler(void (* InterruptHandler)(void)){
 void IO_RA6_DefaultInterruptHandler(void){
     // add your IO_RA6 interrupt custom code
     // or set custom function using IO_RA6_SetInterruptHandler()
+}
+   
+/**
+   IO_RA7 Interrupt Service Routine
+*/
+void IO_RA7_ISR(void) {
+
+    // Add custom IOCAF7 code
+
+    // Call the interrupt handler for the callback registered at runtime
+    if(IO_RA7_InterruptHandler)
+    {
+        IO_RA7_InterruptHandler();
+    }
+    IOCAFbits.IOCAF7 = 0;
+}
+
+/**
+  Allows selecting an interrupt handler for IOCAF7 at application runtime
+*/
+void IO_RA7_SetInterruptHandler(void (* InterruptHandler)(void)){
+    IO_RA7_InterruptHandler = InterruptHandler;
+}
+
+/**
+  Default interrupt handler for IOCAF7
+*/
+void IO_RA7_DefaultInterruptHandler(void){
+    // add your IO_RA7 interrupt custom code
+    // or set custom function using IO_RA7_SetInterruptHandler()
 }
 /**
  End of File
