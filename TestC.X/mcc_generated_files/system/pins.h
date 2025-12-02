@@ -125,6 +125,25 @@
 #define IO_RA3_SetOpenDrain()       do { ODCONAbits. = 1; } while(0)
 #define IO_RA3_SetAnalogMode()      do { ANSELAbits.ANSA3 = 1; } while(0)
 #define IO_RA3_SetDigitalMode()     do { ANSELAbits.ANSA3 = 0; } while(0)
+// get/set IO_RA4 aliases
+#define IO_RA4_TRIS                 TRISAbits.TRISA4
+#define IO_RA4_LAT                  LATAbits.LATA4
+#define IO_RA4_PORT                 PORTAbits.RA4
+#define IO_RA4_WPU                  WPUAbits.WPUA4
+#define IO_RA4_OD                   ODCONAbits.
+#define IO_RA4_ANS                  ANSELAbits.ANSA4
+#define IO_RA4_SetHigh()            do { LATAbits.LATA4 = 1; } while(0)
+#define IO_RA4_SetLow()             do { LATAbits.LATA4 = 0; } while(0)
+#define IO_RA4_Toggle()             do { LATAbits.LATA4 = ~LATAbits.LATA4; } while(0)
+#define IO_RA4_GetValue()           PORTAbits.RA4
+#define IO_RA4_SetDigitalInput()    do { TRISAbits.TRISA4 = 1; } while(0)
+#define IO_RA4_SetDigitalOutput()   do { TRISAbits.TRISA4 = 0; } while(0)
+#define IO_RA4_SetPullup()          do { WPUAbits.WPUA4 = 1; } while(0)
+#define IO_RA4_ResetPullup()        do { WPUAbits.WPUA4 = 0; } while(0)
+#define IO_RA4_SetPushPull()        do { ODCONAbits. = 0; } while(0)
+#define IO_RA4_SetOpenDrain()       do { ODCONAbits. = 1; } while(0)
+#define IO_RA4_SetAnalogMode()      do { ANSELAbits.ANSA4 = 1; } while(0)
+#define IO_RA4_SetDigitalMode()     do { ANSELAbits.ANSA4 = 0; } while(0)
 // get/set IO_RA5 aliases
 #define IO_RA5_TRIS                 TRISAbits.TRISA5
 #define IO_RA5_LAT                  LATAbits.LATA5
@@ -144,6 +163,45 @@
 #define IO_RA5_SetOpenDrain()       do { ODCONAbits. = 1; } while(0)
 #define IO_RA5_SetAnalogMode()      do { ANSELAbits.ANSA5 = 1; } while(0)
 #define IO_RA5_SetDigitalMode()     do { ANSELAbits.ANSA5 = 0; } while(0)
+// get/set IO_RA6 aliases
+#define IO_RA6_TRIS                 TRISAbits.TRISA6
+#define IO_RA6_LAT                  LATAbits.LATA6
+#define IO_RA6_PORT                 PORTAbits.RA6
+#define IO_RA6_WPU                  WPUAbits.WPUA6
+#define IO_RA6_OD                   ODCONAbits.
+#define IO_RA6_ANS                  ANSELAbits.
+#define IO_RA6_SetHigh()            do { LATAbits.LATA6 = 1; } while(0)
+#define IO_RA6_SetLow()             do { LATAbits.LATA6 = 0; } while(0)
+#define IO_RA6_Toggle()             do { LATAbits.LATA6 = ~LATAbits.LATA6; } while(0)
+#define IO_RA6_GetValue()           PORTAbits.RA6
+#define IO_RA6_SetDigitalInput()    do { TRISAbits.TRISA6 = 1; } while(0)
+#define IO_RA6_SetDigitalOutput()   do { TRISAbits.TRISA6 = 0; } while(0)
+#define IO_RA6_SetPullup()          do { WPUAbits.WPUA6 = 1; } while(0)
+#define IO_RA6_ResetPullup()        do { WPUAbits.WPUA6 = 0; } while(0)
+#define IO_RA6_SetPushPull()        do { ODCONAbits. = 0; } while(0)
+#define IO_RA6_SetOpenDrain()       do { ODCONAbits. = 1; } while(0)
+#define IO_RA6_SetAnalogMode()      do { ANSELAbits. = 1; } while(0)
+#define IO_RA6_SetDigitalMode()     do { ANSELAbits. = 0; } while(0)
+#define RA6_SetInterruptHandler  IO_RA6_SetInterruptHandler
+// get/set IO_RA7 aliases
+#define IO_RA7_TRIS                 TRISAbits.TRISA7
+#define IO_RA7_LAT                  LATAbits.LATA7
+#define IO_RA7_PORT                 PORTAbits.RA7
+#define IO_RA7_WPU                  WPUAbits.WPUA7
+#define IO_RA7_OD                   ODCONAbits.
+#define IO_RA7_ANS                  ANSELAbits.ANSA7
+#define IO_RA7_SetHigh()            do { LATAbits.LATA7 = 1; } while(0)
+#define IO_RA7_SetLow()             do { LATAbits.LATA7 = 0; } while(0)
+#define IO_RA7_Toggle()             do { LATAbits.LATA7 = ~LATAbits.LATA7; } while(0)
+#define IO_RA7_GetValue()           PORTAbits.RA7
+#define IO_RA7_SetDigitalInput()    do { TRISAbits.TRISA7 = 1; } while(0)
+#define IO_RA7_SetDigitalOutput()   do { TRISAbits.TRISA7 = 0; } while(0)
+#define IO_RA7_SetPullup()          do { WPUAbits.WPUA7 = 1; } while(0)
+#define IO_RA7_ResetPullup()        do { WPUAbits.WPUA7 = 0; } while(0)
+#define IO_RA7_SetPushPull()        do { ODCONAbits. = 0; } while(0)
+#define IO_RA7_SetOpenDrain()       do { ODCONAbits. = 1; } while(0)
+#define IO_RA7_SetAnalogMode()      do { ANSELAbits.ANSA7 = 1; } while(0)
+#define IO_RA7_SetDigitalMode()     do { ANSELAbits.ANSA7 = 0; } while(0)
 // get/set IO_RC6 aliases
 #define IO_RC6_TRIS                 TRISCbits.TRISC6
 #define IO_RC6_LAT                  LATCbits.LATC6
@@ -197,6 +255,46 @@ void PIN_MANAGER_Initialize (void);
  * @return none
  */
 void PIN_MANAGER_IOC(void);
+
+/**
+ * @ingroup  pinsdriver
+ * @brief Interrupt on Change Handler for the IO_RA6 pin functionality
+ * @param none
+ * @return none
+ */
+void IO_RA6_ISR(void);
+
+/**
+ * @ingroup  pinsdriver
+ * @brief Interrupt Handler Setter for IO_RA6 pin interrupt-on-change functionality.
+ *        Allows selecting an interrupt handler for IO_RA6 at application runtime.
+ * @pre Pins intializer called
+ * @param InterruptHandler function pointer.
+ * @return none
+ */
+void IO_RA6_SetInterruptHandler(void (* InterruptHandler)(void));
+
+/**
+ * @ingroup  pinsdriver
+ * @brief Dynamic Interrupt Handler for IO_RA6 pin.
+ *        This is a dynamic interrupt handler to be used together with the IO_RA6_SetInterruptHandler() method.
+ *        This handler is called every time the IO_RA6 ISR is executed and allows any function to be registered at runtime.
+ * @pre Pins intializer called
+ * @param none
+ * @return none
+ */
+extern void (*IO_RA6_InterruptHandler)(void);
+
+/**
+ * @ingroup  pinsdriver
+ * @brief Default Interrupt Handler for IO_RA6 pin. 
+ *        This is a predefined interrupt handler to be used together with the IO_RA6_SetInterruptHandler() method.
+ *        This handler is called every time the IO_RA6 ISR is executed. 
+ * @pre Pins intializer called
+ * @param none
+ * @return none
+ */
+void IO_RA6_DefaultInterruptHandler(void);
 
 
 #endif // PINS_H

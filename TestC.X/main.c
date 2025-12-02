@@ -1,29 +1,54 @@
 // main.c - PIC16F1788 - MPLAB X v6.20
-// Sends only: 0xA0 + low_byte   0xA2 + low_byte   etc.
-// High byte removed ? 2 bytes per packet, ~4?5 kHz total rate
+// 5 analog channels + RA6 = SCRAM (IOC interrupt), RA7 = RESUME
+// Sends only 2 bytes per channel: ID + high byte
 
 #include <xc.h>
 #include "mcc_generated_files/system/system.h"
 #include "mcc_generated_files/adc/adc.h"
 #include "mcc_generated_files/uart/eusart.h"
 
-// Four dedicated 16-bit registers (only low byte will be sent)
+// Five dedicated 16-bit registers at even addresses
 volatile __at(0x70) uint16_t AN0_value;
-volatile __at(0x71) uint16_t AN2_value;
-volatile __at(0x72) uint16_t AN3_value;
-volatile __at(0x73) uint16_t AN5_value;
+volatile __at(0x72) uint16_t AN1_value;
+volatile __at(0x74) uint16_t AN2_value;
+volatile __at(0x76) uint16_t AN3_value;
+volatile __at(0x78) uint16_t AN5_value;
 
 #define CH_AN0  0
-#define CH_AN2  1
-#define CH_AN3  2
-#define CH_AN5  3
+#define CH_AN1  1
+#define CH_AN2  2
+#define CH_AN3  3
+#define CH_AN5  5
+
+const uint8_t ids[5]       = {0xA0, 0xA1, 0xA2, 0xA3, 0xA5};
+const uint8_t base_addr[5] = {0x70, 0x72, 0x74, 0x76, 0x78};
+
+// Fixed: use normal volatile uint8_t instead of "bit"
+volatile uint8_t running = 1;        // 1 = running, 0 = paused by SCRAM
+
+void __interrupt() ISR(void)
+{
+    if (IOCIF && IOCANbits.IOCAN6)      // RA6 falling edge (SCRAM pressed)
+    {
+        IOCAFbits.IOCAF6 = 0;
+        running = 0;                    // Instantly pause everything
+    }
+    IOCIF = 0;
+}
 
 void main(void)
 {
     uint8_t ch = 0;
-    const uint8_t base_addr[4] = { 0x70, 0x71, 0x72, 0x73 };
 
     SYSTEM_Initialize();
+
+    // RA6 interrupt-on-change setup (SCRAM)
+    IOCANbits.IOCAN6 = 1;       // Interrupt on falling edge
+    IOCAF = 0;
+    IOCIE = 1;
+    PEIE  = 1;
+    GIE   = 1;
+
     __delay_ms(50);
 
     ADC_SetPositiveChannel(CH_AN0);
@@ -31,35 +56,51 @@ void main(void)
 
     while (1)
     {
-        if (ADC_IsConversionDone())
+        // RESUME button (RA7) - simple debounced poll
+        if (!running && !PORTAbits.RA7)          // RA7 pressed
         {
-            uint16_t result = ADC_GetConversionResult();
-            uint8_t  low   = (uint8_t)result;           // lower 8 bits
+            __delay_ms(30);
+            if (!PORTAbits.RA7)                  // still pressed
+            {
+                running = 1;
+                while (!PORTAbits.RA7);          // wait for release
+            }
+        }
 
-            // Store full 16-bit result into dedicated register (indirect)
+        // Only do ADC + serial when running
+        if (running && ADC_IsConversionDone())
+        {
+            uint16_t result     = ADC_GetConversionResult();
+            uint8_t  high_byte  = result >> 8;
+
+            // Store via indirect addressing
             FSR0L = base_addr[ch];
-            INDF0 = low;                    // low byte
-            INDF0 = result >> 8;            // high byte (still saved, just not sent)
+            INDF0 = (uint8_t)result;
+            INDF0 = high_byte;
 
-            // Send only 2 bytes: ID + low_byte
+            // Send 2-byte packet
             while (!UART.IsTxReady());
-            EUSART_Write(0xA0 + ch);        // 0xA0, A2, A3, A5
+            EUSART_Write(ids[ch]);
 
             while (!UART.IsTxReady());
-            EUSART_Write(low);
+            EUSART_Write(high_byte);
 
             // Next channel
             ch++;
-            if (ch >= 4) ch = 0;
+            if (ch >= 5) ch = 0;
 
-            // Start next conversion
-            ADC_SetPositiveChannel(ch==0 ? CH_AN0 :
-                                  ch==1 ? CH_AN2 :
-                                  ch==2 ? CH_AN3 : CH_AN5);
+            // Select next channel
+            switch (ch)
+            {
+                case 0: ADC_SetPositiveChannel(CH_AN0); break;
+                case 1: ADC_SetPositiveChannel(CH_AN1); break;
+                case 2: ADC_SetPositiveChannel(CH_AN2); break;
+                case 3: ADC_SetPositiveChannel(CH_AN3); break;
+                default: ADC_SetPositiveChannel(CH_AN5); break;
+            }
             ADC_StartConversion();
         }
 
-        // Optional tiny delay ? remove completely for maximum speed
-        // __delay_us(5);
+        __delay_us(10);
     }
 }

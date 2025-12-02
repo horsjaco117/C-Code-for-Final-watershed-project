@@ -34,6 +34,7 @@
 
 #include "../pins.h"
 
+void (*IO_RA6_InterruptHandler)(void);
 
 void PIN_MANAGER_Initialize(void)
 {
@@ -55,14 +56,14 @@ void PIN_MANAGER_Initialize(void)
     /**
     ANSELx registers
     */
-    ANSELA = 0xBF;
+    ANSELA = 0x2F;
     ANSELB = 0x7F;
     ANSELC = 0x3F;
 
     /**
     WPUx registers
     */
-    WPUA = 0xD0;
+    WPUA = 0x0;
     WPUB = 0xFF;
     WPUC = 0x7F;
     WPUE = 0x8;
@@ -102,7 +103,7 @@ void PIN_MANAGER_Initialize(void)
     IOCx registers 
     */
     IOCAP = 0x0;
-    IOCAN = 0x0;
+    IOCAN = 0x40;
     IOCAF = 0x0;
     IOCBP = 0x0;
     IOCBN = 0x0;
@@ -114,11 +115,49 @@ void PIN_MANAGER_Initialize(void)
     IOCEN = 0x0;
     IOCEF = 0x0;
 
+    IO_RA6_SetInterruptHandler(IO_RA6_DefaultInterruptHandler);
 
+    // Enable INTCONbits.IOCIE interrupt 
+    INTCONbits.IOCIE = 1; 
 }
   
 void PIN_MANAGER_IOC(void)
 {
+    // interrupt on change for pin IO_RA6}
+    if(IOCAFbits.IOCAF6 == 1)
+    {
+        IO_RA6_ISR();  
+    }
+}
+   
+/**
+   IO_RA6 Interrupt Service Routine
+*/
+void IO_RA6_ISR(void) {
+
+    // Add custom IOCAF6 code
+
+    // Call the interrupt handler for the callback registered at runtime
+    if(IO_RA6_InterruptHandler)
+    {
+        IO_RA6_InterruptHandler();
+    }
+    IOCAFbits.IOCAF6 = 0;
+}
+
+/**
+  Allows selecting an interrupt handler for IOCAF6 at application runtime
+*/
+void IO_RA6_SetInterruptHandler(void (* InterruptHandler)(void)){
+    IO_RA6_InterruptHandler = InterruptHandler;
+}
+
+/**
+  Default interrupt handler for IOCAF6
+*/
+void IO_RA6_DefaultInterruptHandler(void){
+    // add your IO_RA6 interrupt custom code
+    // or set custom function using IO_RA6_SetInterruptHandler()
 }
 /**
  End of File

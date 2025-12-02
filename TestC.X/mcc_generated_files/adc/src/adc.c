@@ -43,8 +43,8 @@ void ADC_Initialize(void)
     //ADPREF VDD; ADCS FOSC/32; ADFM sign_magnitude; ADNREF VSS; 
     ADCON1 = 0x20;
 
-    //CHSN AN1; TRIGSEL disabled; 
-    ADCON2 = 0x1;
+    //CHSN ADNREF; TRIGSEL disabled; 
+    ADCON2 = 0xF;
 
     //ADRESL 0x0; 
     ADRESL = 0x0;
