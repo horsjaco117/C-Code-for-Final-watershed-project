@@ -13,15 +13,17 @@ volatile __at(0x72) uint16_t AN1_value;
 volatile __at(0x74) uint16_t AN2_value;
 volatile __at(0x76) uint16_t AN3_value;
 volatile __at(0x78) uint16_t AN5_value;
+volatile __at(0x79) uint16_t HandShake;
 
-#define CH_AN0  0
-#define CH_AN1  1
-#define CH_AN2  2
-#define CH_AN3  3
+#define HandShake 0
+#define CH_AN0  1
+#define CH_AN1  2
+#define CH_AN2  3
+#define CH_AN3  4
 #define CH_AN5  5
 
-const uint8_t ids[5]       = {0xA0, 0xA1, 0xA2, 0xA3, 0xA5};
-const uint8_t base_addr[5] = {0x70, 0x72, 0x74, 0x76, 0x78};
+const uint8_t ids[6]       = {0x24, 0xA0, 0xA1, 0xA2, 0xA3, 0xA5};
+const uint8_t base_addr[6] = {0x79, 0x70, 0x72, 0x74, 0x76, 0x78};
 
 // Fixed: use normal volatile uint8_t instead of "bit"
 volatile uint8_t running = 1;        // 1 = running, 0 = paused by SCRAM
