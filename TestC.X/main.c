@@ -1,7 +1,6 @@
 // main.c - PIC16F1788 - MPLAB X v6.20
-// DigitalInputs register at 0x7A reflects real digital inputs
-// RA6 = SCRAM (press ? bit6 = 1 ? stops comms)
-// RA7 = RESUME (press ? bit7 = 1 ? resumes comms)
+// SCRAM MODE: Continuously blasts 0x24 + DigitalInputs (bit6 = 1)
+// Normal mode: Full 5-channel cycle
 #include <xc.h>
 #include "mcc_generated_files/system/system.h"
 #include "mcc_generated_files/adc/adc.h"
@@ -13,7 +12,7 @@ volatile __at(0x72) uint16_t AN1_value;
 volatile __at(0x74) uint16_t AN2_value;
 volatile __at(0x76) uint16_t AN3_value;
 volatile __at(0x78) uint16_t AN5_value;
-volatile __at(0x7A) uint8_t DigitalInputs;   // Now a real status register
+volatile __at(0x7A) uint8_t DigitalInputs;   // Status register
 
 #define CH_AN0 0
 #define CH_AN1 1
@@ -31,26 +30,27 @@ void __interrupt() ISR(void)
 {
     if (IOCIF)
     {
-        // RA6 pressed (SCRAM) ? set bit 6
+        // RA6 = SCRAM pressed
         if (IOCAFbits.IOCAF6)
         {
             IOCAFbits.IOCAF6 = 0;
-            __delay_ms(20);                    // debounce
-            if (!PORTAbits.RA6)                // still pressed
+            __delay_ms(20);
+            if (!PORTAbits.RA6)                  // confirmed pressed
             {
-                DigitalInputs |= (1 << 6);      // Set bit 6 = SCRAM active
+                DigitalInputs |=  (1 << 6);       // Set SCRAM active
+                DigitalInputs &= ~(1 << 7);       // Clear any old RESUME flag
             }
         }
 
-        // RA7 pressed (RESUME) ? set bit 7
+        // RA7 = RESUME pressed
         if (IOCAFbits.IOCAF7)
         {
             IOCAFbits.IOCAF7 = 0;
-            __delay_ms(20);                    // debounce
-            if (!PORTAbits.RA7)                // still pressed (active low)
+            __delay_ms(20);
+            if (!PORTAbits.RA7)                  // confirmed pressed
             {
-                DigitalInputs |= (1 << 7);      // Set bit 7 = RESUME requested
-                DigitalInputs &= ~(1 << 6);     // Clear SCRAM bit when resuming
+                DigitalInputs &= ~(1 << 6);       // Clear SCRAM
+                DigitalInputs &= ~(1 << 7);       // Clear RESUME flag (one-shot)
             }
         }
 
@@ -62,38 +62,51 @@ void main(void)
 {
     SYSTEM_Initialize();
 
-    // IOC Setup: both pins trigger on falling edge (button press)
-    IOCANbits.IOCAN6 = 1;   // RA6 falling edge
-    IOCANbits.IOCAN7 = 1;   // RA7 falling edge (both active low)
-
+    // Both buttons trigger on falling edge (active low)
+    IOCANbits.IOCAN6 = 1;
+    IOCANbits.IOCAN7 = 1;
     IOCAF = 0;
     IOCIE = 1;
     PEIE = 1;
     GIE = 1;
 
-    DigitalInputs = 0x00;   // Start clean
+    DigitalInputs = 0x00;
 
     // Flush UART at startup
     while (!TXSTAbits.TRMT);
-    TXREG = 0xFF;
-    while (!TXSTAbits.TRMT);
-    TXREG = 0xFF;
-    while (!TXSTAbits.TRMT);
+    TXREG = 0xFF;  while (!TXSTAbits.TRMT);
+    TXREG = 0xFF;  while (!TXSTAbits.TRMT);
 
     __delay_ms(100);
 
     while (1)
     {
-        // Communication is ON only if SCRAM bit (bit6) is NOT set
-        uint8_t comms_active = !(DigitalInputs & (1 << 6));
+        uint8_t scram_active = (DigitalInputs & (1 << 6));
 
-        // === 1. Send 0x24 + DigitalInputs register FIRST ===
+        // ============================================================
+        // SCRAM MODE: Continuously blast 0x24 + status byte
+        // ============================================================
+        if (scram_active)
+        {
+            if (TXSTAbits.TRMT)                     // Shift register empty?
+            {
+                EUSART_Write(0x24);
+                while (!TXSTAbits.TRMT);            // Wait for byte to finish
+                EUSART_Write(DigitalInputs);        // Always has bit6 = 1
+            }
+            __delay_us(10);
+            continue;
+        }
+
+        // ============================================================
+        // NORMAL MODE: Full data cycle
+        // ============================================================
         if (first_cycle || ch == 0)
         {
             while (!TXSTAbits.TRMT);
             EUSART_Write(0x24);
             while (!TXSTAbits.TRMT);
-            EUSART_Write(DigitalInputs);        // Real status byte
+            EUSART_Write(DigitalInputs);            // Normal status (bit6 = 0)
 
             FSR0L = base_addr[0];
             INDF0 = DigitalInputs;
@@ -101,16 +114,12 @@ void main(void)
             first_cycle = 0;
             ch = 1;
 
-            if (comms_active)
-            {
-                ADC_SetPositiveChannel(CH_AN0);
-                ADC_StartConversion();
-            }
+            ADC_SetPositiveChannel(CH_AN0);
+            ADC_StartConversion();
             continue;
         }
 
-        // === 2. Send ADC data only if communication is active ===
-        if (comms_active && ADC_IsConversionDone())
+        if (ADC_IsConversionDone())
         {
             uint16_t result = ADC_GetConversionResult();
             uint8_t high_byte = result >> 8;
