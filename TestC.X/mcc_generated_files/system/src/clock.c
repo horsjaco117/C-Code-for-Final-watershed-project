@@ -38,9 +38,9 @@
 
 void CLOCK_Initialize(void)
 {
-    OSCCON = (14 << _OSCCON_IRCF_POSN)   // IRCF 8MHz_HF
+    OSCCON = (15 << _OSCCON_IRCF_POSN)   // IRCF 16MHz_HF
         | (2 << _OSCCON_SCS_POSN)   // SCS INTOSC
-        | (1 << _OSCCON_SPLLEN_POSN);  // SPLLEN enabled
+        | (0 << _OSCCON_SPLLEN_POSN);  // SPLLEN disabled
     BORCON = (0 << _BORCON_SBOREN_POSN)   // SBOREN disabled
         | (1 << _BORCON_BORFS_POSN);  // BORFS enabled
     OSCTUNE = (0 << _OSCTUNE_TUN_POSN);  // TUN 0x0
