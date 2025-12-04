@@ -2,7 +2,7 @@
 
 manifest_file_version: 1.0.0
 project: TestC
-creation_date: 2025-12-02T14:17:31.389-07:00[America/Denver]
+creation_date: 2025-12-04T09:25:20.903-07:00[America/Denver]
 operating_system: Windows 10
 mcc_mode: IDE
 mcc_mode_version: v6.20
@@ -27,4 +27,6 @@ modules:
 - {name: '@mchp-mcc/scf-pic8-eusart-v1', type: MELODY, version: 7.1.8}
 - {name: '@mchp-mcc/scf-pic8-interrupt-v3', type: MELODY, version: 1.0.3}
 - {name: '@mchp-mcc/scf-pic8-osc-v7', type: MELODY, version: 1.0.2}
+- {name: '@mchp-mcc/scf-pic8-tmr0-v2', type: MELODY, version: 3.0.0}
+- {name: '@mchp-mcc/scf-pic8-tmr1-v2', type: MELODY, version: 2.1.0}
 - {name: '@mchp-mcc/uart-driver', type: MELODY, version: 1.10.2}

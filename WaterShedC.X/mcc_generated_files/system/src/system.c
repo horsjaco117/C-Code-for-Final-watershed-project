@@ -40,6 +40,8 @@ void SYSTEM_Initialize(void)
 {
     CLOCK_Initialize();
     PIN_MANAGER_Initialize();
+    TMR0_Initialize();
+    TMR1_Initialize();
     ADC_Initialize();
     EUSART_Initialize();
     INTERRUPT_Initialize();

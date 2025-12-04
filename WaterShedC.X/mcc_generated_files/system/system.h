@@ -45,6 +45,8 @@
 #include "../uart/eusart.h"
 #include "../system/interrupt.h"
 #include "../system/clock.h"
+#include "../timer/tmr0.h"
+#include "../timer/tmr1.h"
 
 /**
  * @ingroup systemdriver
