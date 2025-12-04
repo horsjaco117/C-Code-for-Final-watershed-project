@@ -30,7 +30,7 @@ volatile uint8_t timer_tick = 0;
 // 300   ? every 5 minutes
 // 3600  ? every 1 hour
 // 86400 ? every 24 hours
-#define SECONDS_BETWEEN_CASES   1500     // ????? CHANGE THIS ONLY----------------
+#define SECONDS_BETWEEN_CASES   2000     // ????? CHANGE THIS ONLY----------------(1000 = 30 seconds)
 // =================================================
 
 volatile uint32_t second_counter = 0;   // 32-bit for days-long timing
