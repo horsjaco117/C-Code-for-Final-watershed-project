@@ -51,48 +51,41 @@ const uint8_t case_patterns[7] = {
 // =============================================================
 void PSMC1_Servo_Init_RB4(void)
 {
-    TRISCbits.TRISC5 = 0;
-    ANSELCbits.ANSC5 = 0;
+TRISCbits.TRISC5 = 0;
+ANSELCbits.ANSC5 = 0;
 
-    asm("BANKSEL PSMC1CON");
-    asm("MOVLW 0X02");
-    asm("MOVWF PSMC1PRH");
-    asm("MOVLW 0X7F");
-    asm("MOVWF PSMC1PRL");
-    asm("MOVLW 0X01");
-    asm("MOVWF PSMC1DCH");
-    asm("MOVLW 0X3F");
-    asm("MOVWF PSMC1DCL");
-    asm("CLRF PSMC1PHH");
-    asm("CLRF PSMC1PHL");
-    asm("MOVLW 0X01");
-    asm("MOVWF PSMC1CLK");
-    
-    asm("BSF PSMC1STR0, 0"); //P1STRA
-    asm("BCF PSMC1POL, 0"); //P1POLA
-    asm("BSF PSMC1OEN, 0"); //P1OEA
-    
-    asm("BCF PSMC1PRS, 0"); //P1PRST
-    asm("BSF PSMC1PHS, 0"); //P1PHST
-    asm("BSF PSMC1DCS, 0"); //P1DCST
-    
-    asm("MOVLW 0b11000000");
-    asm("MOVWF PSMC1CON");
-    asm("BANKSEL TRISC");
-    asm("BCF TRISC, 0");
-
+asm("BANKSEL PSMC1CON");
+asm("MOVLW 0X27");
+asm("MOVWF PSMC1PRH");
+asm("MOVLW 0X0F");
+asm("MOVWF PSMC1PRL");
+asm("MOVLW 0X01");
+asm("MOVWF PSMC1DCH");
+asm("MOVLW 0X3F");
+asm("MOVWF PSMC1DCL");
+asm("CLRF PSMC1PHH");
+asm("CLRF PSMC1PHL");
+asm("MOVLW 0b00110011");   
+asm("MOVWF PSMC1CLK");
+asm("BSF PSMC1STR0, 5"); //P1STRF
+asm("BCF PSMC1POL, 5"); //P1POLF
+asm("BSF PSMC1OEN, 5"); //P1OEF
+asm("BCF PSMC1PRS, 0"); //P1PRST
+asm("BSF PSMC1PHS, 0"); //P1PHST
+asm("BSF PSMC1DCS, 0"); //P1DCST
+asm("MOVLW 0b11000000");
+asm("MOVWF PSMC1CON");
 }
 
 void PSMC1_UpdateServoPulse(void)
 {
-    uint16_t pulse = (DigitalOutputs & (1<<3)) ? 625 : 375;
+uint16_t pulse = (DigitalOutputs & (1<<3)) ? 1250 : 750;
+PSMC1PRH = 0x27;
+PSMC1PRL = 0x0F;
+PSMC1DCH = pulse >> 8;
+PSMC1DCL = pulse & 0xFF;
+PSMC1CONbits.PSMC1LD = 1;
 
-    asm("BANKSEL PSMC1DCL");
-    PSMC3PR = 4999;
-    asm("MOVWF   PSMC1DCL");
-    PSMC3DC = 375;
-    asm("MOVWF   PSMC1DCH");
-    asm("BSF     PSMC1CON, 7");                 // PSMC3LD = 1
 }
 
 
