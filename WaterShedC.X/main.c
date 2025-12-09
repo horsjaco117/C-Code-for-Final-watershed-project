@@ -5,6 +5,7 @@
 #include "mcc_generated_files/adc/adc.h"
 #include "mcc_generated_files/uart/eusart.h"
 
+
 // =============================================================
 // INDIRECT MEMORY
 // =============================================================
@@ -221,25 +222,43 @@ void main(void)
             ch++; if (ch >= 14) ch = 0; continue;
         }
         if (ch >= 2 && ch <= 6)
+{
+    if (ADC_IsConversionDone())
+    {
+        uint16_t r = ADC_GetConversionResult();
+        FSR0L = base_addr[ch]; INDF0 = (uint8_t)r; FSR0L++; INDF0 = r >> 8;
+        while(!TXSTAbits.TRMT); EUSART_Write(ids[ch]);
+        while(!TXSTAbits.TRMT); EUSART_Write(r >> 8);
+        if ((ch == 5 || ch == 6) && (r >> 8) == 0xFF)
         {
-            if (ADC_IsConversionDone())
-            {
-                uint16_t r = ADC_GetConversionResult();
-                FSR0L = base_addr[ch]; INDF0 = (uint8_t)r; FSR0L++; INDF0 = r >> 8;
-                while(!TXSTAbits.TRMT); EUSART_Write(ids[ch]);
-                while(!TXSTAbits.TRMT); EUSART_Write(r >> 8);
-                if ((ch == 5 || ch == 6) && (r >> 8) == 0x96)
-                {
-                    DigitalInputs |= (1<<6) | (1<<5);
-                    DigitalInputs &= ~(1<<7);
-                }
-                ch++; if (ch >= 14) ch = 0;
-                uint8_t next_ch = (ch == 2) ? 0 : (ch == 3) ? 1 : (ch == 4) ? 2 : (ch == 5) ? 3 : 4;
-                ADC_SetPositiveChannel(next_ch); __delay_us(10);
-                if (next_ch == 4) { ADC_StartConversion(); while(ADC_IsConversionDone()); (void)ADC_GetConversionResult(); __delay_us(10); }
-                ADC_StartConversion();
-            }
-            continue;
+            DigitalInputs |= (1<<6) | (1<<5);
+            DigitalInputs &= ~(1<<7);
         }
+
+        // NEW: Case manipulation based on analog inputs
+        if (ch == 2 && current_case == 3 && (r >> 8) == 0xFF)  // AN0 triggers advance from case 3 to 4
+        {
+            current_case = 4;
+            DigitalOutputs = case_patterns[current_case];
+            PSMC1_UpdateServoPulse();
+            case_timers[current_case] = case_intervals[current_case];
+        }
+        if (ch == 3 && current_case == 5 && (r >> 8) == 0xFF)  // AN1 triggers advance from case 5 to 6
+        {
+            current_case = 6;
+            DigitalOutputs = case_patterns[current_case];
+            PSMC1_UpdateServoPulse();
+            case_timers[current_case] = case_intervals[current_case];
+        }
+        // END OF NEW CODE
+
+        ch++; if (ch >= 14) ch = 0;
+        uint8_t next_ch = (ch == 2) ? 0 : (ch == 3) ? 1 : (ch == 4) ? 2 : (ch == 5) ? 3 : 4;
+        ADC_SetPositiveChannel(next_ch); __delay_us(10);
+        if (next_ch == 4) { ADC_StartConversion(); while(ADC_IsConversionDone()); (void)ADC_GetConversionResult(); __delay_us(10); }
+        ADC_StartConversion();
+    }
+    continue;
+}
     }
 }
