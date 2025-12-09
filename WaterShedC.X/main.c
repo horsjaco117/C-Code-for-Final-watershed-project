@@ -228,7 +228,7 @@ void main(void)
                 FSR0L = base_addr[ch]; INDF0 = (uint8_t)r; FSR0L++; INDF0 = r >> 8;
                 while(!TXSTAbits.TRMT); EUSART_Write(ids[ch]);
                 while(!TXSTAbits.TRMT); EUSART_Write(r >> 8);
-                if ((ch == 5 || ch == 6) && (r >> 8) == 0xFF)
+                if ((ch == 5 || ch == 6) && (r >> 8) == 0x96)
                 {
                     DigitalInputs |= (1<<6) | (1<<5);
                     DigitalInputs &= ~(1<<7);
