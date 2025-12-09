@@ -17,6 +17,11 @@ volatile __at(0x7A) uint16_t AN2_value;
 volatile __at(0x7C) uint16_t AN3_value;
 volatile __at(0x7E) uint16_t AN5_value;
 
+//Global Variables
+volatile uint8_t rx_buffer[9];
+volatile uint8_t rx_index = 0;
+volatile bool rx_packet_ready = false;
+
 // =============================================================
 // 14 PACKETS (clean & perfect)
 // =============================================================
@@ -146,6 +151,39 @@ void __interrupt() ISR(void)
         }
         IOCIF = 0;
     }
+    if (PIE1bits.RCIE && PIR1bits.RCIF)
+{
+    uint8_t byte = RCREG;  // Read the received byte to clear RCIF
+    
+    if (RCSTAbits.OERR)  // Handle overrun error
+    {
+        RCSTAbits.CREN = 0;
+        RCSTAbits.CREN = 1;
+        rx_index = 0;  // Reset buffer on error
+    }
+    else
+    {
+        if (rx_index == 0)
+        {
+            if (byte == 0xCB)  // Start of packet
+            {
+                rx_buffer[0] = byte;
+                rx_index++;
+            }
+            // Else ignore stray bytes
+        }
+        else
+        {
+            rx_buffer[rx_index] = byte;
+            rx_index++;
+            if (rx_index == 9)
+            {
+                rx_packet_ready = true;
+                rx_index = 0;
+            }
+        }
+    }
+}
 }
 
 // =============================================================
@@ -167,11 +205,27 @@ void main(void)
     Timer1_Heartbeat_Init();
     Timer1_1Second_Perfect_Init();
     PSMC1_Servo_Init_RB4(); // ? Servo PWM on RB4
+    RCSTAbits.CREN = 1;
+    PIE1bits.RCIE = 1;
     __delay_ms(100);
     while(1)
     {
         if (!timer_tick) continue;
         timer_tick = 0;
+        if (rx_packet_ready)
+{
+    rx_packet_ready = false;
+    
+    // Update DigitalInputs from the packet
+    DigitalInputs = rx_buffer[1];
+    
+    // Update case intervals (delays in seconds) and reset timers
+    for (uint8_t i = 0; i < 7; i++)
+    {
+        case_intervals[i] = rx_buffer[2 + i];
+        case_timers[i] = case_intervals[i];  // Reset timer to new interval for immediate effect
+    }
+}
         if (one_second_flag)
         {
             one_second_flag = 0;
