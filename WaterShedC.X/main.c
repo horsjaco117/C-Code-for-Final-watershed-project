@@ -55,9 +55,9 @@ TRISCbits.TRISC5 = 0;
 ANSELCbits.ANSC5 = 0;
 
 asm("BANKSEL PSMC1CON");
-asm("MOVLW 0X27");
+asm("MOVLW 0X9C");
 asm("MOVWF PSMC1PRH");
-asm("MOVLW 0X0F");
+asm("MOVLW 0X3F");
 asm("MOVWF PSMC1PRL");
 asm("MOVLW 0X01");
 asm("MOVWF PSMC1DCH");
@@ -70,7 +70,7 @@ asm("MOVWF PSMC1CLK");
 asm("BSF PSMC1STR0, 5"); //P1STRF
 asm("BCF PSMC1POL, 5"); //P1POLF
 asm("BSF PSMC1OEN, 5"); //P1OEF
-asm("BCF PSMC1PRS, 0"); //P1PRST
+asm("BSF PSMC1PRS, 0"); //P1PRST
 asm("BSF PSMC1PHS, 0"); //P1PHST
 asm("BSF PSMC1DCS, 0"); //P1DCST
 asm("MOVLW 0b11000000");
@@ -79,9 +79,10 @@ asm("MOVWF PSMC1CON");
 
 void PSMC1_UpdateServoPulse(void)
 {
-uint16_t pulse = (DigitalOutputs & (1<<3)) ? 1250 : 750;
-PSMC1PRH = 0x27;
-PSMC1PRL = 0x0F;
+    asm("BANKSEL PSMC1CON");
+uint16_t pulse = (DigitalOutputs & (1<<3)) ? 5100 : 1250;
+PSMC1PRH = 0x9C;
+PSMC1PRL = 0x3F;
 PSMC1DCH = pulse >> 8;
 PSMC1DCL = pulse & 0xFF;
 PSMC1CONbits.PSMC1LD = 1;
