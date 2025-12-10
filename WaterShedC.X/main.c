@@ -21,7 +21,9 @@ volatile __at(0x7E) uint16_t AN5_value;
 volatile uint8_t rx_buffer[9];
 volatile uint8_t rx_index = 0;
 volatile bool rx_packet_ready = false;
-
+volatile bool send_ack = false;
+volatile uint8_t rx_type = 0;
+volatile bool rx_special_ready = false;
 // =============================================================
 // 14 PACKETS (clean & perfect)
 // =============================================================
@@ -108,10 +110,12 @@ void Timer1_1Second_Perfect_Init(void) { T1CON = 0; T1CONbits.TMR1CS = 0b01; T1C
 // =============================================================
 void __interrupt() ISR(void)
 {
+    // Timer1 ? 1-second heartbeat
     if (PIE1bits.TMR1IE && PIR1bits.TMR1IF)
     {
         PIR1bits.TMR1IF = 0;
-        TMR1H = 0x3C; TMR1L = 0xB0;
+        TMR1H = 0x3C; 
+        TMR1L = 0xB0;                      // Reload for exact 1-second interval
         second_counter++;
         if (second_counter >= Tick_Control)
         {
@@ -121,7 +125,15 @@ void __interrupt() ISR(void)
                 if (case_timers[i]) case_timers[i]--;
         }
     }
-    if (PIE1bits.TMR2IE && PIR1bits.TMR2IF) { PIR1bits.TMR2IF = 0; timer_tick = 1; }
+
+    // Timer2 ? main loop tick (~1 ms)
+    if (PIE1bits.TMR2IE && PIR1bits.TMR2IF)
+    {
+        PIR1bits.TMR2IF = 0;
+        timer_tick = 1;
+    }
+
+    // Interrupt-on-Change (buttons on RA4, RA6, RA7)
     if (IOCIF)
     {
         if (IOCAFbits.IOCAF4) { IOCAFbits.IOCAF4 = 0; __delay_ms(20);
@@ -129,62 +141,82 @@ void __interrupt() ISR(void)
             {
                 if (DigitalInputs & (1<<6))
                 {
-                    DigitalInputs &= ~((1<<6) | (1<<5)); // Clear SCRAM + PAUSE
-                    DigitalInputs |= (1<<7);
+                    DigitalInputs &= ~((1<<6) | (1<<5));  // Clear SCRAM + PAUSE
+                    DigitalInputs |= (1<<7);             // Set RUN
                 }
-                else DigitalInputs ^= (1<<5);
+                else
+                    DigitalInputs ^= (1<<5);             // Toggle PAUSE
             }
         }
         if (IOCAFbits.IOCAF6) { IOCAFbits.IOCAF6 = 0; __delay_ms(20);
             if (!PORTAbits.RA6)
             {
-                DigitalInputs |= (1<<6) | (1<<5); // SCRAM + FORCE PAUSE
+                DigitalInputs |= (1<<6) | (1<<5);        // Force SCRAM + PAUSE
                 DigitalInputs &= ~(1<<7);
             }
         }
         if (IOCAFbits.IOCAF7) { IOCAFbits.IOCAF7 = 0; __delay_ms(20);
             if (!PORTAbits.RA7)
             {
-                DigitalInputs &= ~(1<<6);
-                DigitalInputs |= (1<<7);
+                DigitalInputs &= ~(1<<6);                // Clear SCRAM only
+                DigitalInputs |= (1<<7);                 // Set RUN
             }
         }
         IOCIF = 0;
     }
+
+    // EUSART Receive Interrupt ? CB command packet + ACK handling
     if (PIE1bits.RCIE && PIR1bits.RCIF)
 {
-    uint8_t byte = RCREG;  // Read the received byte to clear RCIF
-    
-    if (RCSTAbits.OERR)  // Handle overrun error
+    if (RCSTAbits.OERR || RCSTAbits.FERR)  // Handle overrun or framing error
     {
         RCSTAbits.CREN = 0;
         RCSTAbits.CREN = 1;
-        rx_index = 0;  // Reset buffer on error
+        rx_index = 0;
+        rx_type = 0;
+        return;
+    }
+
+    uint8_t byte = RCREG;  // Read byte to clear RCIF
+
+    if (rx_index == 0)
+    {
+        rx_buffer[0] = byte;
+        if (byte == 0xCB)
+        {
+            rx_type = 1;   // CB packet mode
+            rx_index = 1;
+        }
+        else if (byte == 0x3A)
+        {
+            rx_type = 2;   // :) packet mode
+            rx_index = 1;
+        }
+        // Else ignore stray bytes
     }
     else
     {
-        if (rx_index == 0)
+        rx_buffer[rx_index++] = byte;
+        if (rx_type == 1 && rx_index == 9)  // Completed CB packet
         {
-            if (byte == 0xCB)  // Start of packet
-            {
-                rx_buffer[0] = byte;
-                rx_index++;
-            }
-            // Else ignore stray bytes
+            rx_packet_ready = true;
+            send_ack = true;                // Trigger ACK for CB only
+            rx_index = 0;
+            rx_type = 0;
         }
-        else
+        else if (rx_type == 2 && rx_index == 4)  // Completed :) packet
         {
-            rx_buffer[rx_index] = byte;
-            rx_index++;
-            if (rx_index == 9)
+            if (rx_buffer[1] == 0x29)       // Verify second byte is ')'
             {
-                rx_packet_ready = true;
-                rx_index = 0;
+                rx_special_ready = true;    // Flag for main loop processing
             }
+            rx_index = 0;
+            rx_type = 0;
         }
     }
 }
 }
+
 
 // =============================================================
 // MAIN
@@ -226,6 +258,26 @@ void main(void)
         case_timers[i] = case_intervals[i];  // Reset timer to new interval for immediate effect
     }
 }
+        if (rx_special_ready)
+{
+    rx_special_ready = false;
+
+    DigitalInputs = rx_buffer[2];    // Apply modifier (e.g., 0xA0 for pause)
+    DigitalOutputs = rx_buffer[3];   // Directly modify outputs (e.g., 0xF0)
+
+    PSMC1_UpdateServoPulse();        // Update servo if bit 3 changed
+    PORTB = DigitalOutputs;          // Immediately apply outputs to port
+}
+        // ? NEW: Send acknowledgement byte(s)
+        if (send_ack)
+        {
+            send_ack = false;
+
+            while(!TXSTAbits.TRMT);    // Wait until TX shift register is empty
+            EUSART_Write(0xAC);        // Send 0xAC = "ACK" (you can choose any byte)
+            while(!TXSTAbits.TRMT);
+            EUSART_Write(0xCB);        // Optional: echo back the command byte
+        }
         if (one_second_flag)
         {
             one_second_flag = 0;

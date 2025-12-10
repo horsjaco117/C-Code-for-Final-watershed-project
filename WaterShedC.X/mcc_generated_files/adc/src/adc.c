@@ -62,13 +62,13 @@ void ADC_Initialize(void)
 void ADC_SetPositiveChannel(adc_posChannel_t channel)
 {
     //Selects the A/D channel
-    ADCON0bits.CHS = channel;    
+    ADCON0bits.CHS = (uint8_t)channel;    
 }
 
 void ADC_SetNegativeChannel(adc_negChannel_t channel)
 {
     //Selects the A/D channel
-    ADCON2bits.CHSN = channel;    
+    ADCON2bits.CHSN = (uint8_t)channel;    
 }
 
 void ADC_StartConversion(void)
@@ -92,8 +92,8 @@ adc_result_t ADC_GetConversionResult(void)
 adc_result_t ADC_GetConversion(adc_posChannel_t posChannel,adc_negChannel_t negChannel)
 {
     //Selects the A/D channel
-    ADCON0bits.CHS = posChannel;
-    ADCON2bits.CHSN = negChannel;    
+    ADCON0bits.CHS = (uint8_t)posChannel;
+    ADCON2bits.CHSN = (uint8_t)negChannel;    
     
     //Turns on the ADC module
     ADON = 1;
